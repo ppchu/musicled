@@ -135,6 +135,6 @@ void loop()
     strip.show();
   }
   
-  delay(9);
+  delay(8);
 }
 
