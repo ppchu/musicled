@@ -55,6 +55,9 @@ bool setupFailed = false;
 // Use WiFiClient class to create TCP connections
 WiFiClient client;
 byte val = 0;
+int pixelColor = 0;
+int r = 0, g = 0, b = 0;
+unsigned long rms, gms, bms;
 
 void setup()
 {
@@ -103,10 +106,6 @@ void setup()
   }
  
   strip.begin();
-
-  for (i = 0; i < NUMPIXELS; i++) {
-    strip.setPixelColor(i, 0xFFFFFF);
-  }
   strip.show();
 }
 
@@ -130,10 +129,59 @@ void loop()
   if (client.available())
   { // if data is availble to read
     val = client.read();
-    Serial.println(val);
-    strip.setBrightness(val);
-    strip.show();
   }
+  Serial.println(val);
+
+  // bass
+  if (val == '1')
+    g = 0xFF;
+
+  // middle
+  if (val == '2')
+  {
+    r = 0xFF;
+  }
+
+  // treble
+  if (val == '3')
+  {
+    b = 0xFF;
+  }
+
+  // dimming
+  if (g > 0)
+    g -= 5;
+  
+  if (r > 0)
+    r -= 5;
+  
+  if (b > 0)
+    b -= 5;
+
+  // write color to strip
+  for (i = 15; i <45; i++) 
+  {
+    strip.setPixelColor(i, g, 0, 0);
+  }
+  
+  for (i = 5; i < 15 ; i++)
+  {
+    strip.setPixelColor(i, 0, r, 0);
+  }
+  for (i = 45; i < 55; i++)
+  {
+    strip.setPixelColor(i, 0, r, 0);
+  }    
+  
+  for (i = 0; i < 5 ; i++)
+  {
+    strip.setPixelColor(i, 0, 0, b);
+  }
+  for (i = 55; i < 60; i++)
+  {
+    strip.setPixelColor(i, 0, 0, b);
+  }
+  strip.show();
   
   delay(8);
 }

@@ -63,7 +63,7 @@ void setup() {
   // algorithm if it is giving too many false-positives. The default value is 10, 
   // which is essentially no damping. If you try to set the sensitivity to a negative value, 
   // an error will be reported and it will be set to 10 instead. 
-  beat.setSensitivity(200);  // sets the sensitivity to 200 ms
+  beat.setSensitivity(100);  // sets the sensitivity to 200 ms
   
   // make a new beat listener, so that we won't miss any buffers for the analysis
   bl = new BeatListener(beat, in); 
@@ -85,40 +85,50 @@ void draw() {
     }
   }
   
-  // draw an orange rectangle over the bands in 
-  // the range we are querying
-  int lowBand = 3;
-  int highBand = 10;
+  // seperate into 3 blocks
+  int loloBand = 0;
+  int lohiBand = 10;
+  int midloBand = 11;
+  int midhiBand = 20;
+  int hiloBand = 21;
+  int hihiBand = 26;
   // at least this many bands must have an onset 
   // for isRange to return true
-  int numberOfOnsetsThreshold = 1;
-  if ( beat.isRange(lowBand, highBand, numberOfOnsetsThreshold) )
+  int numberOfOnsetsThreshold = 3;
+  if ( beat.isRange(loloBand, lohiBand, numberOfOnsetsThreshold) )
   {
-    fill(232,179,2,200);
-    rect(rectW*lowBand, 0, (highBand-lowBand)*rectW, height);
+    fill(0,255,0,200);
+    rect(rectW*loloBand, 0, (lohiBand-loloBand)*rectW, height);
     
-    //myServer.write('1');
-    //println("1");
+    myServer.write('1');
+    println("1");
   }
-  else if (beat.isRange(21, 26, 1))
+  else if (beat.isRange(midloBand, midhiBand, numberOfOnsetsThreshold))
   { 
-    fill(232,179,2,200);
-    rect(rectW*21, 0, (26-21)*rectW, height);
+    fill(255,0,0,200);
+    rect(rectW*midloBand, 0, (midhiBand-midloBand)*rectW, height);
     
-    //myServer.write('2');
-    //println("2");
+    myServer.write('2');
+    println("2");
+  }
+  else if (beat.isRange(hiloBand, hihiBand, 3))
+  {
+    fill(0,0,255,200);
+    rect(rectW*hiloBand, 0, (hihiBand-hiloBand)*rectW, height);
+    
+    myServer.write('3');
+    println("3");
   }
   else
   {
-    //myServer.write('a');
-    //println("a");
+    myServer.write('0'); 
+    println('0');
   }
   
   fill(255);
   
   val = (val + 1) % 255;
-  myServer.write(val);
-  println(val);
+  //myServer.write(val);
   delay(10);
 }
 
