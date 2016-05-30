@@ -5,12 +5,11 @@ import processing.serial.*;
 
 // minim variables
 Minim minim;
-AudioPlayer song;
 AudioInput in;
 BeatDetect beat;
 BeatListener bl;
 int bufferSize = 1024;
-int sampleRate = 48000;
+int sampleRate = 44100;
 
 // network variables
 Server myServer;
@@ -127,8 +126,6 @@ void draw() {
   
   fill(255);
   
-  val = (val + 1) % 255;
-  //myServer.write(val);
   delay(10);
 }
 

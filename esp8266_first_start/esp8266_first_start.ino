@@ -56,8 +56,11 @@ bool setupFailed = false;
 WiFiClient client;
 byte val = 0;
 int pixelColor = 0;
-int r = 0, g = 0, b = 0;
+unsigned int r[NUMPIXELS] = {0}; 
+unsigned int g[NUMPIXELS] = {0};
+unsigned int b[NUMPIXELS] = {0};
 unsigned long rms, gms, bms;
+int ledMode = 2;
 
 void setup()
 {
@@ -67,17 +70,17 @@ void setup()
   pinMode(ESP8266_LED, OUTPUT);
   
   // set up Blynk
-  Blynk.begin(auth, "Peter's iPhone", "peteriscool");
+  Blynk.begin(auth, "PBJK", "applerules69");
 
   // set up WiFi connection to PC
   const uint16_t port = 5204;
-  const char * host = "172.20.10.2"; // ip or dns
+  const char * host = "192.168.1.49"; // ip or dns
   
   Serial.begin(115200);
   delay(10);
 
   // We start by connecting to a WiFi network
-  WiFiMulti.addAP("Peter's iPhone", "peteriscool");
+  WiFiMulti.addAP("PBJK", "192.168.1.49");
 
   Serial.println();
   Serial.println();
@@ -107,6 +110,9 @@ void setup()
  
   strip.begin();
   strip.show();
+
+  // random seed
+  randomSeed(0);
 }
 
 int toggle, toggle2 = 0;
@@ -116,73 +122,149 @@ BLYNK_WRITE(V0)
   toggle = param.asInt();
 }
 
+
 void loop()
 {
   int i;
+  int randG, randR, randB;
 
   // do nothing if wifi failed
   if (setupFailed == true)
     return;
 
   Blynk.run();  // Initiates Blynk
-
+  
   if (client.available())
   { // if data is availble to read
     val = client.read();
-  }
-  Serial.println(val);
+    //Serial.println(val);
+    
+    // begin bar flashes
 
-  // bass
-  if (val == '1')
-    g = 0xFF;
+    randG = random(0x100);
+    randR = random(0x100);
+    randB = random(0x100);
+    if (val < 2)
+    {
+      
+      for ( i = 0; i < 30; i++)
+      {
+        r[i] = randR;
+        g[i] = randG;
+        b[i] = randB;
+      }
+    }
+    // end bar flashes
 
-  // middle
-  if (val == '2')
+  /*
+    // mode 2 - has to be put in client.available to work
+  if (val < 4)
   {
-    r = 0xFF;
+    for (i = 0; i < 4; i++)
+    {
+      r[i] = 0xFF;
+      g[i] = b[i] = 0;
+    }
   }
-
-  // treble
-  if (val == '3')
+  else if (val < 11)
   {
-    b = 0xFF;
+    for (i = 4; i < 11; i++)
+    {
+      r[i] = 0xFF;
+      g[i] = 0xA5;
+      b[i] = 0;
+    }
+  }
+  else if (val < 20)
+  {
+    for (i = 11; i < 20; i++)
+    {
+      r[i] = 0xFF;
+      g[i] = 0xFF;
+      b[i] = 0;
+    }
+  }
+  else if (val < 25)
+  {
+    for (i = 20; i < 25; i++)
+    {
+      r[i] = 0x00;
+      g[i] = 0xFF;
+      b[i] = 0;
+    }
+  }
+  else
+  {
+    for (i = 25; i < 30; i++)
+    {
+      r[i] = 0x00;
+      g[i] = 0;
+      b[i] = 0xFF;
+    }
+  }
+  */
+  
   }
 
   // dimming
-  if (g > 0)
-    g -= 5;
-  
-  if (r > 0)
-    r -= 5;
-  
-  if (b > 0)
-    b -= 5;
-
-  // write color to strip
-  for (i = 15; i <45; i++) 
+  for ( i = 0; i < NUMPIXELS; i++)
   {
-    strip.setPixelColor(i, g, 0, 0);
+    if (g[i] > 0)
+      g[i] /= 1.05;
+    
+    if (r[i] > 0)
+      r[i] /= 1.05;
+    
+    if (b[i] > 0)
+      b[i] /= 1.05;
+    
+    
+    strip.setPixelColor(i, g[i], r[i], b[i]);  
   }
-  
-  for (i = 5; i < 15 ; i++)
-  {
-    strip.setPixelColor(i, 0, r, 0);
-  }
-  for (i = 45; i < 55; i++)
-  {
-    strip.setPixelColor(i, 0, r, 0);
-  }    
-  
-  for (i = 0; i < 5 ; i++)
-  {
-    strip.setPixelColor(i, 0, 0, b);
-  }
-  for (i = 55; i < 60; i++)
-  {
-    strip.setPixelColor(i, 0, 0, b);
-  }
+  Serial.printf("%d %d %d\r", g[0], r[0], b[0]);
   strip.show();
+
+
+  /*
+  if (ledMode == 1)
+  {
+    // bass
+    if (val == '1')
+      g = 0xFF;
   
-  delay(15);
+    // middle
+    if (val == '2')
+    {
+      r = 0xFF;
+    }
+  
+    // treble
+    if (val == '3')
+    {
+      b = 0xFF;
+    }
+  
+    // write color to strip
+    for (i = 15; i <45; i++) 
+      strip.setPixelColor(i, g, 0, 0);
+      
+    for (i = 5; i < 15 ; i++)
+      strip.setPixelColor(i, 0, r, 0);
+    
+    for (i = 45; i < 55; i++)
+      strip.setPixelColor(i, 0, r, 0); 
+    
+    for (i = 0; i < 5 ; i++)
+      strip.setPixelColor(i, 0, 0, b);
+  
+    for (i = 55; i < 60; i++)
+      strip.setPixelColor(i, 0, 0, b);
+
+  }
+
+  */
+
+  
+  delay(2);
 }
 
