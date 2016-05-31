@@ -62,6 +62,10 @@ unsigned int b[NUMPIXELS] = {0};
 unsigned long rms, gms, bms;
 int ledMode = 2;
 
+// Blynk variables
+int togRand, modeSel, together;
+int blynk_r, blynk_g, blynk_b;
+
 void setup()
 {
   int i;
@@ -115,13 +119,27 @@ void setup()
   randomSeed(0);
 }
 
-int toggle, toggle2 = 0;
-
 BLYNK_WRITE(V0)
 {
-  toggle = param.asInt();
+  togRand = param.asInt();
 }
 
+BLYNK_WRITE(V4)
+{
+  blynk_r = param[0].asInt();
+  blynk_g = param[1].asInt();
+  blynk_b = param[2].asInt();
+}
+
+BLYNK_WRITE(V5)
+{
+  modeSel = param.asInt();
+}
+
+BLYNK_WRITE(V6)
+{
+  together = param.asInt();
+}
 
 void loop()
 {
@@ -138,72 +156,126 @@ void loop()
   { // if data is availble to read
     val = client.read();
     //Serial.println(val);
-    
-    // begin bar flashes
 
-    randG = random(0x100);
-    randR = random(0x100);
-    randB = random(0x100);
-    if (val < 2)
-    {
+    if ( modeSel == 0)
+    { // bar flash mode
+      if (togRand)
+      { // using random RBG value to determine colors
+        randG = random(0x100);
+        randR = random(0x100);
+        randB = random(0x100);
+      }
+      else
+      { // using zeRGBa on Blynk app to determine color
+        randG = blynk_g;
+        randR = blynk_r;
+        randB = blynk_b;
+      }
       
-      for ( i = 0; i < 30; i++)
+      if (val < 2)
+      { // detecting < bin2 ( < 28.7Hz )
+        for ( i = 0; i < 30; i++)
+        {
+          r[i] = randR;
+          g[i] = randG;
+          b[i] = randB;
+        }
+      }
+      // bar flash mode end
+    }
+    else if ( modeSel == 1)
+    { // spectrum mode (sub bass, bass, midrange, high mids, high freq
+      if (val < 4)
       {
-        r[i] = randR;
-        g[i] = randG;
-        b[i] = randB;
+        if (together)
+        { // each section beats together
+          for (i = 0; i < 4; i++)
+          {
+            r[i] = 0xFF;
+            g[i] = 0;
+            b[i] = 0;
+          }
+        }
+        else
+        { // blink individual bins
+          r[val] = 0xFF;
+          g[val] = 0;
+          b[val] = 0;
+        }
+      }
+      else if (val < 11)
+      {
+        if (together)
+        { // each section beats together
+          for (i = 4; i < 11; i++)
+          {
+            r[i] = 0xFF;
+            g[i] = 0xA5;
+            b[i] = 0;
+          }
+        }
+        else
+        { // blink individual bins
+          r[val] = 0xFF;
+          g[val] = 0xA5;
+          b[val] = 0;
+        }
+      }
+      else if (val < 20)
+      {
+        if (together)
+        { // each section beats together
+          for (i = 11; i <20 ; i++)
+          {
+            r[i] = 0xFF;
+            g[i] = 0xFF;
+            b[i] = 0;
+          }
+        }
+        else
+        { // blink individual bins
+          r[val] = 0xFF;
+          g[val] = 0xFF;
+          b[val] = 0;
+        }
+      }
+      else if (val < 25)
+      {
+        if (together)
+        { // each section beats together
+          for (i = 20; i < 25; i++)
+          {
+            r[i] = 0;
+            g[i] = 0xFF;
+            b[i] = 0;
+          }
+        }
+        else
+        { // blink individual bins
+          r[val] = 0;
+          g[val] = 0xFF;
+          b[val] = 0;
+        }
+      }
+      else
+      {
+        if (together)
+        { // each section beats together
+          for (i = 25; i < 30; i++)
+          {
+            r[i] = 0;
+            g[i] = 0;
+            b[i] = 0xFF;
+          }
+        }
+        else
+        { // blink individual bins
+          r[val] = 0;
+          g[val] = 0;
+          b[val] = 0xFF;
+        }
       }
     }
-    // end bar flashes
-
-  /*
-    // mode 2 - has to be put in client.available to work
-  if (val < 4)
-  {
-    for (i = 0; i < 4; i++)
-    {
-      r[i] = 0xFF;
-      g[i] = b[i] = 0;
-    }
-  }
-  else if (val < 11)
-  {
-    for (i = 4; i < 11; i++)
-    {
-      r[i] = 0xFF;
-      g[i] = 0xA5;
-      b[i] = 0;
-    }
-  }
-  else if (val < 20)
-  {
-    for (i = 11; i < 20; i++)
-    {
-      r[i] = 0xFF;
-      g[i] = 0xFF;
-      b[i] = 0;
-    }
-  }
-  else if (val < 25)
-  {
-    for (i = 20; i < 25; i++)
-    {
-      r[i] = 0x00;
-      g[i] = 0xFF;
-      b[i] = 0;
-    }
-  }
-  else
-  {
-    for (i = 25; i < 30; i++)
-    {
-      r[i] = 0x00;
-      g[i] = 0;
-      b[i] = 0xFF;
-    }
-  }
-  */
-  
   }
 
   // dimming
@@ -221,7 +293,7 @@ void loop()
     
     strip.setPixelColor(i, g[i], r[i], b[i]);  
   }
-  Serial.printf("%d %d %d\r", g[0], r[0], b[0]);
+  //Serial.printf("%d %d %d\r", g[0], r[0], b[0]);
   strip.show();
 
 
