@@ -31,8 +31,10 @@
 #include <BlynkSimpleEsp8266.h>
 #include <ESP8266WiFiMulti.h>
 
-#define NUMPIXELS 60
-#define ESP8266_LED 5
+// constants
+#define NUMPIXELS 60    // how many LEDs on the strip
+#define ESP8266_LED 5   // ESP8266 on-board LED on port 5
+#define COUNT_TO 20   // beam mode counter
 
 #define DATAPIN   2 // GPIO2 - MOSI
 #define CLOCKPIN  4 // GPIO4 - CLK
@@ -51,16 +53,20 @@ Adafruit_DotStar strip = Adafruit_DotStar(NUMPIXELS, DATAPIN, CLOCKPIN);
 char auth[] = "62999818c539415093b705f3be062d70";
 
 // global variables
-bool setupFailed = false;
-// Use WiFiClient class to create TCP connections
-WiFiClient client;
+bool setupFailed = false; // flag for WiFi setup validity. if failed, blink red
+WiFiClient client; // create TCP connection
 byte val = 0;
-int pixelColor = 0;
-unsigned int r[NUMPIXELS] = {0}; 
-unsigned int g[NUMPIXELS] = {0};
+
+// LED controlling variables
+unsigned int r[NUMPIXELS] = {0}; // each index holds the R, G, or B value
+unsigned int g[NUMPIXELS] = {0}; // of the LED with that index
 unsigned int b[NUMPIXELS] = {0};
-unsigned long rms, gms, bms;
-int ledMode = 2;
+
+int heads[NUMPIXELS] = {-1};   // array holding the heads and tails values
+int tails[NUMPIXELS] = {-1};   // of the "beams" that go across the LED strip
+int beamCnt = 0;
+int beamDelay = 0;
+int beamLen = -3;
 
 // Blynk variables
 int togRand, modeSel, together;
@@ -121,6 +127,8 @@ void setup()
 
 BLYNK_WRITE(V0)
 {
+  // 0 - random
+  // 1 - use zeRGBa
   togRand = param.asInt();
 }
 
@@ -157,9 +165,10 @@ void loop()
     val = client.read();
     //Serial.println(val);
 
+    //////////////////// mode 0 ////////////////////
     if ( modeSel == 0)
     { // bar flash mode
-      if (togRand)
+      if (!togRand)
       { // using random RBG value to determine colors
         randG = random(0x100);
         randR = random(0x100);
@@ -183,8 +192,9 @@ void loop()
       }
       // bar flash mode end
     }
+    //////////////////// mode 1 ////////////////////
     else if ( modeSel == 1)
-    { // spectrum mode (sub bass, bass, midrange, high mids, high freq
+    { // spectrum mode (sub bass, bass, midrange, high mids, high freq)
       if (val < 4)
       {
         if (together)
@@ -276,65 +286,92 @@ void loop()
         }
       }
     }
+    //////////////////// mode 2 ////////////////////
+    else if ( modeSel == 2 )
+    {
+      if (val == 7 )
+      { // trigger the beam
+        if (beamCnt >= NUMPIXELS)
+          beamCnt = 0;
+          
+        heads[beamCnt] = 0;
+        tails[beamCnt] = beamLen;
+
+        if (!togRand) // every beam gets a random color
+        {
+          r[beamCnt] = random(0x100);
+          g[beamCnt] = random(0x100);
+          b[beamCnt] = random(0x100);
+        }
+
+        beamCnt++;
+        //Serial.println("beat det");
+      }
+      //if ( beamDelay % COUNT_TO == COUNT_TO && heads[0] >= 0)
+      for (i = 0; i < NUMPIXELS; i++)
+      {
+        if ( heads[i] >= 0)
+        { // update head location every COUNT_TO to control beam speed
+          if (!togRand)
+            strip.setPixelColor(heads[i], g[i], r[i], b[i]);
+          else
+            strip.setPixelColor(heads[i], 0, 0xFF, 0);    // 'On' pixel at head
+          
+          strip.setPixelColor(tails[i], 0);             // 'Off' pixel at tail
+          
+          if ( ++heads[i] >= NUMPIXELS )  // reset head
+            heads[i] = -1;
+    
+          if ( ++tails[i] >= NUMPIXELS )  // reset tail
+            tails[i] = beamLen;
+    
+          //Serial.println("moving head");
+        }
+      }
+    }
   }
 
-  // dimming
-  for ( i = 0; i < NUMPIXELS; i++)
+/*
+  if (modeSel == 2)
   {
-    if (g[i] > 0)
-      g[i] /= 1.05;
-    
-    if (r[i] > 0)
-      r[i] /= 1.05;
-    
-    if (b[i] > 0)
-      b[i] /= 1.05;
-    
-    
-    strip.setPixelColor(i, g[i], r[i], b[i]);  
-  }
-  //Serial.printf("%d %d %d\r", g[0], r[0], b[0]);
-  strip.show();
+    for (i = 0; i < NUMPIXELS; i++)
+    {
+      if ( heads[i] >= 0)
+      { // update head location every COUNT_TO to control beam speed
+        strip.setPixelColor(heads[i], 0, 0xFF, 0);    // 'On' pixel at head
+        strip.setPixelColor(tails[i], 0);             // 'Off' pixel at tail
+        
+        if ( ++heads[i] >= NUMPIXELS )  // reset head
+          heads[i] = -1;
+  
+        if ( ++tails[i] >= NUMPIXELS )  // reset tail
+          tails[i] = beamLen;
+  
+        //Serial.println("moving head");
+      }
+    }
+  }*/
 
-
-  /*
-  if (ledMode == 1)
+  // dimming in the right modes
+  if ( modeSel == 0 || modeSel == 1)
   {
-    // bass
-    if (val == '1')
-      g = 0xFF;
-  
-    // middle
-    if (val == '2')
+    for ( i = 0; i < NUMPIXELS; i++ )
     {
-      r = 0xFF;
-    }
-  
-    // treble
-    if (val == '3')
-    {
-      b = 0xFF;
-    }
-  
-    // write color to strip
-    for (i = 15; i <45; i++) 
-      strip.setPixelColor(i, g, 0, 0);
+      if (g[i] > 0)
+        g[i] /= 1.05;
       
-    for (i = 5; i < 15 ; i++)
-      strip.setPixelColor(i, 0, r, 0);
-    
-    for (i = 45; i < 55; i++)
-      strip.setPixelColor(i, 0, r, 0); 
-    
-    for (i = 0; i < 5 ; i++)
-      strip.setPixelColor(i, 0, 0, b);
-  
-    for (i = 55; i < 60; i++)
-      strip.setPixelColor(i, 0, 0, b);
-
+      if (r[i] > 0)
+        r[i] /= 1.05;
+      
+      if (b[i] > 0)
+        b[i] /= 1.05;
+      
+      
+      strip.setPixelColor(i, g[i], r[i], b[i]);  
+    }
+    //Serial.printf("%d %d %d\r", g[0], r[0], b[0]);
   }
-
-  */
+  strip.show();
 
   
   delay(2);
