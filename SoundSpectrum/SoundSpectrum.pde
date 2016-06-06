@@ -35,7 +35,7 @@ FFT fftLin;
 FFT fftLog;
 
 // constants defines
-final int avgSens = 75;  // number of averages for calculating running average
+final int avgSens = 200;  // number of averages for calculating running average
 final float spectrumScale = 2;  // scalar to make bars more visible
 final int timeSens = 300;  // ms to wait until next beat is valid
 final float avgMult = 1.8;  // scales the threshold

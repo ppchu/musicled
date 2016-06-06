@@ -80,17 +80,17 @@ void setup()
   pinMode(ESP8266_LED, OUTPUT);
   
   // set up Blynk
-  Blynk.begin(auth, "PBJK", "applerules69");
+  Blynk.begin(auth, "Peter's iPhone", "peteriscool");
 
   // set up WiFi connection to PC
   const uint16_t port = 5204;
-  const char * host = "192.168.1.49"; // ip or dns
+  const char * host = "172.20.10.2"; // ip or dns
   
   Serial.begin(115200);
   delay(10);
 
   // We start by connecting to a WiFi network
-  WiFiMulti.addAP("PBJK", "192.168.1.49");
+  WiFiMulti.addAP("Peter's iPhone", "172.20.10.2");
 
   Serial.println();
   Serial.println();
