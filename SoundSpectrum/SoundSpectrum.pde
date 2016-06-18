@@ -27,6 +27,7 @@ import processing.net.*;
 import processing.serial.*;
 import ddf.minim.analysis.*;
 import ddf.minim.*;
+import papaya.*;
 
 // minim
 Minim minim;  
@@ -56,6 +57,8 @@ int counter;
 byte absPwr[] = new byte[30];
 byte avgPwr[] = new byte[30];
 byte beats[] = new byte[30];
+float spectrumSum = 0;
+float spectrumAvg = 0;
 
 // network variables
 Server myServer;
@@ -229,12 +232,15 @@ void draw()
       // running average power
       sums[i] = 0;
       
-      runAvgs[i][counter % runAvgs[i].length] = (int)fftLog.getAvg(i)*spectrumScale;
-      for (int j = 0; j < runAvgs[i].length; j++)
+      // store values into array
+      runAvgs[i][counter % avgSens] = (int)fftLog.getAvg(i)*spectrumScale;
+      for (int j = 0; j < avgSens; j++)
       {
         sums[i] += runAvgs[i][j];
       }
-      avgs[i] = sums[i] / runAvgs[i].length;
+      avgs[i] = sums[i] / avgSens;
+      //println("bin " + i + " stddev: " + Descriptive.std(runAvgs[i], true));
+      println("bin " + i + " moving max: " + avgs[i] + 3 * Descriptive.std(runAvgs[i], true));
       
       // draw the threshold rect
       fill(0, 0, 255);
@@ -259,9 +265,20 @@ void draw()
       {
         beats[i] = 31;
       }
-      println("bin " + i + " lowFreq = "+ lowFreq + " hiFreq = " + highFreq);
+      
+      // calculate instant spectrum sum and avg
+      spectrumSum += fftLog.getAvg(i) * spectrumScale;
+      
+      //println("bin " + i + " lowFreq = "+ lowFreq + " hiFreq = " + highFreq);
     }
     counter++;
+    
+    spectrumAvg = spectrumSum / 30;
+    // draw spectrum avg
+    fill(255, 255, 0);
+    rect(29*w, height, 30*w, height - spectrumAvg);
+    println("spectrum avg = " + spectrumAvg);
+    spectrumSum = 0;
     
     // delay to let ESP run
     delay(10);
