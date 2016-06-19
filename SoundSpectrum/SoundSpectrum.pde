@@ -36,7 +36,9 @@ FFT fftLin;
 FFT fftLog;
 
 // constants defines
-final int avgSens = 200;  // number of averages for calculating running average
+final int avgSens = 75;  // number of averages for calculating running average
+final int maxSens = 400; // number of averages for calculating running maximums
+final int spectrumSens = 400; // number of averages for calculating running spectrum max
 final float spectrumScale = 2;  // scalar to make bars more visible
 final int timeSens = 300;  // ms to wait until next beat is valid
 final float avgMult = 1.8;  // scales the threshold
@@ -50,8 +52,12 @@ PFont font;
 
 // beat finding variables
 float runAvgs[][] = new float[30][avgSens];
+float runMaxs[][] = new float[30][maxSens];
 float avgs[] = new float[30];
+float maxs[] = new float[30];
 float sums[] = new float[30];
+float runSpectrumAvgs[] = new float[spectrumSens];
+float runSPectrumMaxs[] = new float[spectrumSens];
 int timer[] = new int[30];
 int counter;
 byte absPwr[] = new byte[30];
@@ -59,6 +65,7 @@ byte avgPwr[] = new byte[30];
 byte beats[] = new byte[30];
 float spectrumSum = 0;
 float spectrumAvg = 0;
+float spectrumAvgMaxRatio = 0;
 
 // network variables
 Server myServer;
@@ -221,32 +228,36 @@ void draw()
         text("Log Avg Center Frequency: " + centerFrequency + " bin " + i, 5, height - 25);
         fill(255, 0, 0);
       }
-      else
-      {
-        fill(255);
-      }
-      // draw a rectangle for each average, multiply the value by spectrumScale so we can see it better
-      //rect( xl, height, xr, height - fftLog.getAvg(i)*spectrumScale );
-      rect(i*w, height, i*w + w, height - fftLog.getAvg(i)*spectrumScale);
       
-      // running average power
+      // running average, running maximum 
       sums[i] = 0;
+      maxs[i] = 0;
       
       // store values into array
       runAvgs[i][counter % avgSens] = (int)fftLog.getAvg(i)*spectrumScale;
+      runMaxs[i][counter % maxSens] = (int)fftLog.getAvg(i)*spectrumScale;
       for (int j = 0; j < avgSens; j++)
       {
         sums[i] += runAvgs[i][j];
       }
       avgs[i] = sums[i] / avgSens;
+      for (int j = 0; j < maxSens; j++)
+      {
+        sums[i] += runMaxs[i][j];
+      }
+      maxs[i] = sums[i] / maxSens;
       //println("bin " + i + " stddev: " + Descriptive.std(runAvgs[i], true));
-      println("bin " + i + " moving max: " + avgs[i] + 3 * Descriptive.std(runAvgs[i], true));
+      println("bin " + i + " moving max: " + maxs[i] + 3 * Descriptive.std(runMaxs[i], true));
+      
+      // draw the maximum rect
+      fill(0, 255, 0);
+      rect(i*w, height, i*w + w, height - (maxs[i] + 3 * Descriptive.std(runMaxs[i], true)));
       
       // draw the threshold rect
       fill(0, 0, 255);
       //rect( xl, height, xr, height - avgs[i] * avgMult);
-      rect(i*w, height, i*w + w, height - avgs[i] * avgMult + avgOffset);
-      
+      //rect(i*w, height, i*w + w, height - avgs[i] * avgMult + avgOffset);
+      rect(i*w, height, i*w + w, height - (avgs[i] + Descriptive.std(runAvgs[i], true)));
       
       //println("bin=" + i + " inst=" + fftLog.getAvg(i)*spectrumScale + " avg=" + avgs[i] * avgMult + 1);
       
@@ -258,7 +269,7 @@ void draw()
         //rect( xl, height23, xr, height23 - fftLog.getAvg(i)*spectrumScale );
         //rect(i*w, height23, i*w + w, height23 - 30);
         beats[i] = (byte)i;
-        myServer.write(beats[i]);
+        //myServer.write(beats[i]);
         //println("writing " + beats[i]);
       }
       else
@@ -270,14 +281,35 @@ void draw()
       spectrumSum += fftLog.getAvg(i) * spectrumScale;
       
       //println("bin " + i + " lowFreq = "+ lowFreq + " hiFreq = " + highFreq);
+      
+      // draw a rectangle for each average, multiply the value by spectrumScale so we can see it better
+      //rect( xl, height, xr, height - fftLog.getAvg(i)*spectrumScale );
+      fill(255);
+      rect(i*w, height, i*w + w, height - fftLog.getAvg(i)*spectrumScale);
     }
     counter++;
     
     spectrumAvg = spectrumSum / 30;
+    runSpectrumAvgs[counter % spectrumSens] = spectrumAvg;
+    spectrumAvgMaxRatio = spectrumAvg / (6 * Descriptive.std(runSpectrumAvgs, true)) * 255;
+    // draw spectrum max
+    fill(255, 0, 0);
+    rect(29*w, height, 30*w, height - (6 * Descriptive.std(runSpectrumAvgs, true)));
     // draw spectrum avg
     fill(255, 255, 0);
     rect(29*w, height, 30*w, height - spectrumAvg);
-    println("spectrum avg = " + spectrumAvg);
+    
+    
+    // proportion to 255 for LED brightness
+    if (spectrumAvgMaxRatio > 255) {
+      println("spectrum avg/max ratio = 255");
+      myServer.write(255);
+    }
+    else {
+      println("spectrum avg/max ratio = " + spectrumAvgMaxRatio);
+      myServer.write((byte)spectrumAvgMaxRatio);
+    }
+    
     spectrumSum = 0;
     
     // delay to let ESP run
