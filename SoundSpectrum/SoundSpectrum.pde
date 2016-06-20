@@ -247,7 +247,7 @@ void draw()
       }
       maxs[i] = sums[i] / maxSens;
       //println("bin " + i + " stddev: " + Descriptive.std(runAvgs[i], true));
-      println("bin " + i + " moving max: " + maxs[i] + 3 * Descriptive.std(runMaxs[i], true));
+      //println("bin " + i + " moving max: " + maxs[i] + 3 * Descriptive.std(runMaxs[i], true));
       
       // draw the maximum rect
       fill(0, 255, 0);
@@ -257,20 +257,22 @@ void draw()
       fill(0, 0, 255);
       //rect( xl, height, xr, height - avgs[i] * avgMult);
       //rect(i*w, height, i*w + w, height - avgs[i] * avgMult + avgOffset);
-      rect(i*w, height, i*w + w, height - (avgs[i] + Descriptive.std(runAvgs[i], true)));
+      rect(i*w, height, i*w + w, height - (avgs[i] + 1.5 * Descriptive.std(runAvgs[i], true)));
       
       //println("bin=" + i + " inst=" + fftLog.getAvg(i)*spectrumScale + " avg=" + avgs[i] * avgMult + 1);
       
-      // if sensitivity timer is up AND inst pwr > avg pwr, draw beats
-      if (millis() > timer[i] + timeSens && fftLog.getAvg(i)*spectrumScale > avgs[i] * avgMult + avgOffset)
-      {
-        timer[i] = millis();
-        fill(0, 255, 0);
-        //rect( xl, height23, xr, height23 - fftLog.getAvg(i)*spectrumScale );
-        //rect(i*w, height23, i*w + w, height23 - 30);
-        beats[i] = (byte)i;
-        //myServer.write(beats[i]);
-        //println("writing " + beats[i]);
+      // if sensitivity timer is up AND inst pwr > threshold, draw beats
+      //if (millis() > timer[i] + timeSens && fftLog.getAvg(i)*spectrumScale > avgs[i] * avgMult + avgOffset)
+      if (fftLog.getAvg(i)*spectrumScale > avgs[i] +  1.5 * Descriptive.std(runAvgs[i], true) + avgOffset) {
+        if (millis() > timer[i] + timeSens) {
+          timer[i] = millis();
+          fill(0, 255, 0);
+          //rect( xl, height23, xr, height23 - fftLog.getAvg(i)*spectrumScale );
+          //rect(i*w, height23, i*w + w, height23 - 30);
+          beats[i] = (byte)i;
+          myServer.write(beats[i]);
+          //println("writing " + beats[i]);
+        }
       }
       else
       {
@@ -280,7 +282,7 @@ void draw()
       // calculate instant spectrum sum and avg
       spectrumSum += fftLog.getAvg(i) * spectrumScale;
       
-      //println("bin " + i + " lowFreq = "+ lowFreq + " hiFreq = " + highFreq);
+      println("bin " + i + " lowFreq = "+ lowFreq + " hiFreq = " + highFreq);
       
       // draw a rectangle for each average, multiply the value by spectrumScale so we can see it better
       //rect( xl, height, xr, height - fftLog.getAvg(i)*spectrumScale );
@@ -303,17 +305,17 @@ void draw()
     // proportion to 255 for LED brightness
     if (spectrumAvgMaxRatio > 255) {
       println("spectrum avg/max ratio = 255");
-      myServer.write(255);
+      //myServer.write(255);
     }
     else {
       println("spectrum avg/max ratio = " + spectrumAvgMaxRatio);
-      myServer.write((byte)spectrumAvgMaxRatio);
+      //myServer.write((byte)spectrumAvgMaxRatio);
     }
     
     spectrumSum = 0;
     
     // delay to let ESP run
-    delay(10);
+    delay(15);
   }
 }
 

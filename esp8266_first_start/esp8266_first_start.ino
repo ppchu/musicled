@@ -39,6 +39,10 @@
 #define DATAPIN   2 // GPIO2 - MOSI
 #define CLOCKPIN  4 // GPIO4 - CLK
 
+#define IP_ADDR "192.168.1.129"
+#define SSID_NAME "peter"
+#define SSID_PW "peteriscool"
+
 // WiFi
 ESP8266WiFiMulti WiFiMulti;
 
@@ -66,7 +70,7 @@ int heads[NUMPIXELS] = {-1};   // array holding the heads and tails values
 int tails[NUMPIXELS] = {-1};   // of the "beams" that go across the LED strip
 int beamCnt = 0;
 int beamDelay = 0;
-int beamLen = -3;
+int beamLen = -7;
 
 // Blynk variables
 int togRand, modeSel, together;
@@ -80,17 +84,17 @@ void setup()
   pinMode(ESP8266_LED, OUTPUT);
   
   // set up Blynk
-  Blynk.begin(auth, "Peter's iPhone", "peteriscool");
+  Blynk.begin(auth, SSID_NAME, SSID_PW);
 
   // set up WiFi connection to PC
   const uint16_t port = 5204;
-  const char * host = "172.20.10.2"; // ip or dns
+  const char * host = IP_ADDR; // ip or dns
   
   Serial.begin(115200);
   delay(10);
 
   // We start by connecting to a WiFi network
-  WiFiMulti.addAP("Peter's iPhone", "172.20.10.2");
+  WiFiMulti.addAP(SSID_NAME, IP_ADDR);
 
   Serial.println();
   Serial.println();
@@ -181,9 +185,9 @@ void loop()
         randB = blynk_b;
       }
       
-      if (val < 2)
-      { // detecting < bin2 ( < 28.7Hz )
-        for ( i = 0; i < 30; i++)
+      if (val == 5)
+      { // detecting == bin2 (71 < val < 86 Hz )
+        for ( i = 0; i < NUMPIXELS; i++)
         {
           r[i] = randR;
           g[i] = randG;
@@ -329,7 +333,7 @@ void loop()
         }
       }
     }
-  }
+  } // end of client available loop
 
 /*
   if (modeSel == 2)
@@ -352,28 +356,34 @@ void loop()
     }
   }*/
 
-  // dimming in the right modes
+  // dimming in the right mode
   if ( modeSel == 0 || modeSel == 1)
   {
     for ( i = 0; i < NUMPIXELS; i++ )
     {
       if (g[i] > 0)
-        g[i] /= 1.05;
+        g[i] /= 1.04;
       
       if (r[i] > 0)
-        r[i] /= 1.05;
+        r[i] /= 1.04;
       
       if (b[i] > 0)
-        b[i] /= 1.05;
+        b[i] /= 1.04;
       
       
       strip.setPixelColor(i, g[i], r[i], b[i]);  
     }
     //Serial.printf("%d %d %d\r", g[0], r[0], b[0]);
   }
+
+  if ( modeSel == 3 )
+  {
+    for ( i = 0; i < NUMPIXELS; i++)
+      strip.setPixelColor(i, val, val, val);
+  }
   strip.show();
 
   
-  delay(2);
+  delay(5);
 }
 
