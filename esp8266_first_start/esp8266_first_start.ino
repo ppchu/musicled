@@ -35,6 +35,7 @@
 #define NUMPIXELS 60    // how many LEDs on the strip
 #define ESP8266_LED 5   // ESP8266 on-board LED on port 5
 #define COUNT_TO 20   // beam mode counter
+#define MINIBAR_LEN 10 // length of small sections that light up in mode 3
 
 #define DATAPIN   2 // GPIO2 - MOSI
 #define CLOCKPIN  4 // GPIO4 - CLK
@@ -333,31 +334,37 @@ void loop()
         }
       }
     }
-  } // end of client available loop
+    else if ( modeSel == 3 )
+    { // random small bars
+      if (val == 5)
+      { // detecting == bin2 (71 < val < 86 Hz )
+        i = random(60 - MINIBAR_LEN);
 
-/*
-  if (modeSel == 2)
-  {
-    for (i = 0; i < NUMPIXELS; i++)
-    {
-      if ( heads[i] >= 0)
-      { // update head location every COUNT_TO to control beam speed
-        strip.setPixelColor(heads[i], 0, 0xFF, 0);    // 'On' pixel at head
-        strip.setPixelColor(tails[i], 0);             // 'Off' pixel at tail
-        
-        if ( ++heads[i] >= NUMPIXELS )  // reset head
-          heads[i] = -1;
-  
-        if ( ++tails[i] >= NUMPIXELS )  // reset tail
-          tails[i] = beamLen;
-  
-        //Serial.println("moving head");
+        if (!togRand)
+        { // using random RBG value to determine colors
+          randG = random(0x100);
+          randR = random(0x100);
+          randB = random(0x100);
+        }
+        else
+        { // using zeRGBa on Blynk app to determine color
+          randG = blynk_g;
+          randR = blynk_r;
+          randB = blynk_b;
+        }
+          
+        for (int j = i ; j < i + MINIBAR_LEN; j++)
+        {
+          r[j] = randR;
+          g[j] = randG;
+          b[j] = randB;
+        }
       }
     }
-  }*/
+  } // end of client available loop
 
   // dimming in the right mode
-  if ( modeSel == 0 || modeSel == 1)
+  if ( modeSel == 0 || modeSel == 1 || modeSel == 3)
   {
     for ( i = 0; i < NUMPIXELS; i++ )
     {
@@ -374,12 +381,6 @@ void loop()
       strip.setPixelColor(i, g[i], r[i], b[i]);  
     }
     //Serial.printf("%d %d %d\r", g[0], r[0], b[0]);
-  }
-
-  if ( modeSel == 3 )
-  {
-    for ( i = 0; i < NUMPIXELS; i++)
-      strip.setPixelColor(i, val, val, val);
   }
   strip.show();
 
