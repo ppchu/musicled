@@ -37,10 +37,11 @@ FFT fftLog;
 
 // constants defines
 final int avgSens = 75;  // number of averages for calculating running average
-final int maxSens = 400; // number of averages for calculating running maximums
-final int spectrumSens = 400; // number of averages for calculating running spectrum max
+final int maxSens = 300; // number of averages for calculating running maximums
+final int spectrumAvgSens = 5; // number of averages for calculating running spectrum avg
+final int spectrumMaxSens = 400; // number of averages for calculating running spectrum max
 final float spectrumScale = 2;  // scalar to make bars more visible
-final int timeSens = 300;  // ms to wait until next beat is valid
+final int timeSens = 250;  // ms to wait until next beat is valid
 final float avgMult = 1.8;  // scales the threshold
 final float avgOffset = 4;   // higher number prevents noisy detections
 final int bufferSize = 1024; 
@@ -51,18 +52,18 @@ float height23;
 PFont font;
 
 // beat finding variables
-float runAvgs[][] = new float[30][avgSens];
-float runMaxs[][] = new float[30][maxSens];
-float avgs[] = new float[30];
-float maxs[] = new float[30];
-float sums[] = new float[30];
-float runSpectrumAvgs[] = new float[spectrumSens];
-float runSPectrumMaxs[] = new float[spectrumSens];
-int timer[] = new int[30];
+float runAvgs[][] = new float[60][avgSens];
+float runMaxs[][] = new float[60][maxSens];
+float avgs[] = new float[60];
+float maxs[] = new float[60];
+float sums[] = new float[60];
+float runSpectrumAvgs[] = new float[spectrumAvgSens];
+float runSpectrumMaxs[] = new float[spectrumMaxSens];
+int timer[] = new int[60];
 int counter;
-byte absPwr[] = new byte[30];
-byte avgPwr[] = new byte[30];
-byte beats[] = new byte[30];
+byte absPwr[] = new byte[60];
+byte avgPwr[] = new byte[60];
+byte beats[] = new byte[60];
 float spectrumSum = 0;
 float spectrumAvg = 0;
 float spectrumAvgMaxRatio = 0;
@@ -99,7 +100,7 @@ void setup()
   // calculate averages based on a miminum octave width of 22 Hz
   // split each octave into three bands
   // this should result in 30 averages
-  fftLog.logAverages( 22, 3 );
+  fftLog.logAverages( 22, 6 );
   
   rectMode(CORNERS);
   font = loadFont("ArialMT-12.vlw");
@@ -198,6 +199,7 @@ void draw()
   // draw the logarithmic averages
   {
     int w = int( width/fftLog.avgSize() );
+    
     // since logarithmically spaced averages are not equally spaced
     // we can't precompute the width for all averages
     for(int i = 0; i < fftLog.avgSize(); i++)
@@ -218,16 +220,6 @@ void draw()
       // the average.
       int xl = (int)fftLog.freqToIndex(lowFreq);
       int xr = (int)fftLog.freqToIndex(highFreq);
-      
-      // if the mouse is inside of this average's rectangle
-      // print the center frequency and set the fill color to red
-      //if ( mouseX >= xl && mouseX < xr )
-      if ( mouseX >= i * w && mouseX < i*w + w)
-      {
-        fill(255, 128);
-        text("Log Avg Center Frequency: " + centerFrequency + " bin " + i, 5, height - 25);
-        fill(255, 0, 0);
-      }
       
       // running average, running maximum 
       sums[i] = 0;
@@ -257,13 +249,13 @@ void draw()
       fill(0, 0, 255);
       //rect( xl, height, xr, height - avgs[i] * avgMult);
       //rect(i*w, height, i*w + w, height - avgs[i] * avgMult + avgOffset);
-      rect(i*w, height, i*w + w, height - (avgs[i] + 1.7 * Descriptive.std(runAvgs[i], true)));
+      rect(i*w, height, i*w + w, height - (avgs[i] + 1.3 * Descriptive.std(runAvgs[i], true)));
       
       //println("bin=" + i + " inst=" + fftLog.getAvg(i)*spectrumScale + " avg=" + avgs[i] * avgMult + 1);
       
       // if sensitivity timer is up AND inst pwr > threshold, draw beats
       //if (millis() > timer[i] + timeSens && fftLog.getAvg(i)*spectrumScale > avgs[i] * avgMult + avgOffset)
-      if (fftLog.getAvg(i)*spectrumScale > avgs[i] +  1.7 * Descriptive.std(runAvgs[i], true) + avgOffset) {
+      if (fftLog.getAvg(i)*spectrumScale > avgs[i] +  1.3 * Descriptive.std(runAvgs[i], true) + avgOffset) {
         if (millis() > timer[i] + timeSens) {
           timer[i] = millis();
           fill(0, 255, 0);
@@ -276,7 +268,7 @@ void draw()
       }
       else
       {
-        beats[i] = 31;
+        beats[i] = 61;
       }
       
       // calculate instant spectrum sum and avg
@@ -288,18 +280,29 @@ void draw()
       //rect( xl, height, xr, height - fftLog.getAvg(i)*spectrumScale );
       fill(255);
       rect(i*w, height, i*w + w, height - fftLog.getAvg(i)*spectrumScale);
+      
+      // if the mouse is inside of this average's rectangle
+      // print the center frequency and set the fill color to red
+      //if ( mouseX >= xl && mouseX < xr )
+      if ( mouseX >= i * w && mouseX < i*w + w)
+      {
+        fill(255, 255, 0);
+        text("Log Avg Center Frequency: " + centerFrequency + " bin " + i, 5, height - 25);
+        fill(255, 0, 0);
+      }
     }
     counter++;
     
-    spectrumAvg = spectrumSum / 30;
-    runSpectrumAvgs[counter % spectrumSens] = spectrumAvg;
-    spectrumAvgMaxRatio = spectrumAvg / (6 * Descriptive.std(runSpectrumAvgs, true)) * 255;
+    spectrumAvg = spectrumSum / 50;
+    runSpectrumAvgs[counter % spectrumAvgSens] = spectrumAvg;
+    runSpectrumMaxs[counter % spectrumMaxSens] = spectrumAvg;
+    spectrumAvgMaxRatio = Descriptive.mean(runSpectrumAvgs) / (Descriptive.mean(runSpectrumMaxs) + 3 * Descriptive.std(runSpectrumMaxs, true)) * 255;
     // draw spectrum max
     fill(255, 0, 0);
-    rect(29*w, height, 30*w, height - (6 * Descriptive.std(runSpectrumAvgs, true)));
+    rect(59*w, height, 60*w, height - (Descriptive.mean(runSpectrumMaxs) + 3 * Descriptive.std(runSpectrumMaxs, true)));
     // draw spectrum avg
     fill(255, 255, 0);
-    rect(29*w, height, 30*w, height - spectrumAvg);
+    rect(59*w, height, 60*w, height - Descriptive.mean(runSpectrumAvgs));
     
     
     // proportion to 255 for LED brightness

@@ -40,8 +40,8 @@
 #define DATAPIN   2 // GPIO2 - MOSI
 #define CLOCKPIN  4 // GPIO4 - CLK
 
-#define IP_ADDR "192.168.1.129"
-#define SSID_NAME "peter"
+#define IP_ADDR "172.20.10.6"
+#define SSID_NAME "Peter's iPhone"
 #define SSID_PW "peteriscool"
 
 // WiFi
@@ -74,7 +74,7 @@ int beamDelay = 0;
 int beamLen = -7;
 
 // Blynk variables
-int togRand, modeSel, together;
+int togRand, modeSel;
 int blynk_r, blynk_g, blynk_b;
 
 void setup()
@@ -149,11 +149,6 @@ BLYNK_WRITE(V5)
   modeSel = param.asInt();
 }
 
-BLYNK_WRITE(V6)
-{
-  together = param.asInt();
-}
-
 void loop()
 {
   int i;
@@ -186,7 +181,7 @@ void loop()
         randB = blynk_b;
       }
       
-      if (val == 5)
+      if (val == 10)
       { // detecting == bin2 (71 < val < 86 Hz )
         for ( i = 0; i < NUMPIXELS; i++)
         {
@@ -198,103 +193,85 @@ void loop()
       // bar flash mode end
     }
     //////////////////// mode 1 ////////////////////
-    else if ( modeSel == 1)
+    else if ( modeSel == 1 )
     { // spectrum mode (sub bass, bass, midrange, high mids, high freq)
-      if (val < 4)
-      {
-        if (together)
-        { // each section beats together
-          for (i = 0; i < 4; i++)
-          {
-            r[i] = 0xFF;
-            g[i] = 0;
-            b[i] = 0;
-          }
-        }
-        else
-        { // blink individual bins
-          r[val] = 0xFF;
-          g[val] = 0;
-          b[val] = 0;
-        }
+      if (val < 5)
+      { // red
+        r[val] = 0xFF;
+        g[val] = 0;
+        b[val] = 0;
       }
-      else if (val < 11)
-      {
-        if (together)
-        { // each section beats together
-          for (i = 4; i < 11; i++)
-          {
-            r[i] = 0xFF;
-            g[i] = 0xA5;
-            b[i] = 0;
-          }
-        }
-        else
-        { // blink individual bins
-          r[val] = 0xFF;
-          g[val] = 0xA5;
-          b[val] = 0;
-        }
+      else if (val < 10)
+      { // orange
+        r[val] = 0xFF;
+        g[val] = 0xA5;
+        b[val] = 0;
+      }
+      else if (val < 15)
+      { // yellow
+        r[val] = 0xFF;
+        g[val] = 0xFF;
+        b[val] = 0;
       }
       else if (val < 20)
-      {
-        if (together)
-        { // each section beats together
-          for (i = 11; i <20 ; i++)
-          {
-            r[i] = 0xFF;
-            g[i] = 0xFF;
-            b[i] = 0;
-          }
-        }
-        else
-        { // blink individual bins
-          r[val] = 0xFF;
-          g[val] = 0xFF;
-          b[val] = 0;
-        }
+      { // chartreuse
+        r[val] = 0x7F;
+        g[val] = 0xFF;
+        b[val] = 0;
       }
       else if (val < 25)
-      {
-        if (together)
-        { // each section beats together
-          for (i = 20; i < 25; i++)
-          {
-            r[i] = 0;
-            g[i] = 0xFF;
-            b[i] = 0;
-          }
-        }
-        else
-        { // blink individual bins
-          r[val] = 0;
-          g[val] = 0xFF;
-          b[val] = 0;
-        }
+      { // green
+        r[val] = 0;
+        g[val] = 0x80;
+        b[val] = 0;
+      }
+      else if (val < 30)
+      { // spring
+        r[val] = 0;
+        g[val] = 0xE6;
+        b[val] = 0x73;
+      }
+      else if (val < 35)
+      { // cyan
+        r[val] = 0;
+        g[val] = 0xFF;
+        b[val] = 0xFF;
+      }
+      else if (val < 40)
+      { // azure
+        r[val] = 0xF0;
+        g[val] = 0xFF;
+        b[val] = 0xFF;
+      }
+      else if (val < 45)
+      { // blue
+        r[val] = 0;
+        g[val] = 0;
+        b[val] = 0xFF;
+      }
+      else if (val < 50)
+      { // violet
+        r[val] = 0xEE;
+        g[val] = 0x82;
+        b[val] = 0xEE;
+      }
+      else if (val < 55)
+      { // magenta
+        r[val] = 0xFF;
+        g[val] = 0x00;
+        b[val] = 0xFF;
       }
       else
-      {
-        if (together)
-        { // each section beats together
-          for (i = 25; i < 30; i++)
-          {
-            r[i] = 0;
-            g[i] = 0;
-            b[i] = 0xFF;
-          }
-        }
-        else
-        { // blink individual bins
-          r[val] = 0;
-          g[val] = 0;
-          b[val] = 0xFF;
-        }
+      { // rose
+        r[val] = 0xFF;
+        g[val] = 0;
+        b[val] = 0xFF;
       }
     }
     //////////////////// mode 2 ////////////////////
     else if ( modeSel == 2 )
     {
-      if (val == 7 )
+      if (val == 17 )
       { // trigger the beam
         if (beamCnt >= NUMPIXELS)
           beamCnt = 0;
@@ -336,23 +313,14 @@ void loop()
     }
     else if ( modeSel == 3 )
     { // random small bars
-      if (val == 5)
-      { // detecting == bin2 (71 < val < 86 Hz )
-        i = random(60 - MINIBAR_LEN);
-
-        if (!togRand)
-        { // using random RBG value to determine colors
-          randG = random(0x100);
-          randR = random(0x100);
-          randB = random(0x100);
-        }
-        else
-        { // using zeRGBa on Blynk app to determine color
-          randG = blynk_g;
-          randR = blynk_r;
-          randB = blynk_b;
-        }
-          
+      
+      i = random(60 - MINIBAR_LEN);
+      
+      if (val == 10 || val == 17 || val == 51)
+      {
+        randG = random(0x100);
+        randR = random(0x100);
+        randB = random(0x100);
         for (int j = i ; j < i + MINIBAR_LEN; j++)
         {
           r[j] = randR;
@@ -361,10 +329,20 @@ void loop()
         }
       }
     }
+    else if ( modeSel == 4 )
+    { // spectrum avg
+      for (i = 0; i < NUMPIXELS; i++)
+      {
+        r[i] = val;
+        g[i] = val;
+        b[i] = val;
+        strip.setPixelColor(i, g[i], r[i], b[i]); 
+      }
+    }
   } // end of client available loop
 
   // dimming in the right mode
-  if ( modeSel == 0 || modeSel == 1 || modeSel == 3)
+  if ( modeSel == 0 || modeSel == 1 || modeSel == 3 )
   {
     for ( i = 0; i < NUMPIXELS; i++ )
     {
