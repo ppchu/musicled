@@ -36,13 +36,14 @@
 #define ESP8266_LED 5   // ESP8266 on-board LED on port 5
 #define COUNT_TO 20   // beam mode counter
 #define MINIBAR_LEN 10 // length of small sections that light up in mode 3
+#define MINIBAR_LEN_BASS 30
 
 #define DATAPIN   2 // GPIO2 - MOSI
 #define CLOCKPIN  4 // GPIO4 - CLK
 
-#define IP_ADDR "172.20.10.6"
-#define SSID_NAME "Peter's iPhone"
-#define SSID_PW "peteriscool"
+#define IP_ADDR "192.168.1.103"
+#define SSID_NAME "2WIRE908"
+#define SSID_PW "5304501344"
 
 // WiFi
 ESP8266WiFiMulti WiFiMulti;
@@ -314,9 +315,23 @@ void loop()
     else if ( modeSel == 3 )
     { // random small bars
       
-      i = random(60 - MINIBAR_LEN);
+      i = random(60 - MINIBAR_LEN_BASS);
       
-      if (val == 10 || val == 17 || val == 51)
+      if (val == 10)
+      {
+        randG = random(0x100);
+        randR = random(0x100);
+        randB = random(0x100);
+        for (int j = i ; j < i + MINIBAR_LEN_BASS; j++)
+        {
+          r[j] = randR;
+          g[j] = randG;
+          b[j] = randB;
+        }
+      }
+
+      i = random(60 - MINIBAR_LEN);
+      if (val == 17 || val == 54)
       {
         randG = random(0x100);
         randR = random(0x100);

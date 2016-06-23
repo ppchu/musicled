@@ -249,13 +249,13 @@ void draw()
       fill(0, 0, 255);
       //rect( xl, height, xr, height - avgs[i] * avgMult);
       //rect(i*w, height, i*w + w, height - avgs[i] * avgMult + avgOffset);
-      rect(i*w, height, i*w + w, height - (avgs[i] + 1.3 * Descriptive.std(runAvgs[i], true)));
+      rect(i*w, height, i*w + w, height - (avgs[i] + 1 * Descriptive.std(runAvgs[i], true)));
       
       //println("bin=" + i + " inst=" + fftLog.getAvg(i)*spectrumScale + " avg=" + avgs[i] * avgMult + 1);
       
       // if sensitivity timer is up AND inst pwr > threshold, draw beats
       //if (millis() > timer[i] + timeSens && fftLog.getAvg(i)*spectrumScale > avgs[i] * avgMult + avgOffset)
-      if (fftLog.getAvg(i)*spectrumScale > avgs[i] +  1.3 * Descriptive.std(runAvgs[i], true) + avgOffset) {
+      if (fftLog.getAvg(i)*spectrumScale > avgs[i] +  1 * Descriptive.std(runAvgs[i], true) + avgOffset) {
         if (millis() > timer[i] + timeSens) {
           timer[i] = millis();
           fill(0, 255, 0);
