@@ -35,15 +35,16 @@
 #define NUMPIXELS 60    // how many LEDs on the strip
 #define ESP8266_LED 5   // ESP8266 on-board LED on port 5
 #define COUNT_TO 20   // beam mode counter
-#define MINIBAR_LEN 10 // length of small sections that light up in mode 3
+#define MINIBAR_LEN_TREB 7 // length of small sections that light up in mode 3
 #define MINIBAR_LEN_BASS 30
+#define MINIBAR_LEN_MIDL 15 
 
 #define DATAPIN   2 // GPIO2 - MOSI
 #define CLOCKPIN  4 // GPIO4 - CLK
 
-#define IP_ADDR "192.168.1.103"
-#define SSID_NAME "2WIRE908"
-#define SSID_PW "5304501344"
+#define IP_ADDR "172.20.10.6"
+#define SSID_NAME "Peter's iPhone"
+#define SSID_PW "peteriscool"
 
 // WiFi
 ESP8266WiFiMulti WiFiMulti;
@@ -75,7 +76,7 @@ int beamDelay = 0;
 int beamLen = -7;
 
 // Blynk variables
-int togRand, modeSel;
+int customize, modeSel;
 int blynk_r, blynk_g, blynk_b;
 
 void setup()
@@ -118,9 +119,7 @@ void setup()
   Serial.println(host);
 
   if (!client.connect(host, port)) {
-      Serial.println("connection failed");
-      Serial.println("wait 5 sec...");
-      delay(5000);
+      Serial.println("connection failed, restart system");
       setupFailed = true;;
   }
  
@@ -131,23 +130,38 @@ void setup()
   randomSeed(0);
 }
 
+// Blynk functions for virtual pins
 BLYNK_WRITE(V0)
 {
-  // 0 - random
-  // 1 - use zeRGBa
-  togRand = param.asInt();
+  modeSel = 0;
 }
-
+BLYNK_WRITE(V1)
+{
+  modeSel = 1;
+}
+BLYNK_WRITE(V2)
+{
+  modeSel = 2;
+}
+BLYNK_WRITE(V3)
+{
+  modeSel = 3;
+}
 BLYNK_WRITE(V4)
 {
-  blynk_r = param[0].asInt();
-  blynk_g = param[1].asInt();
-  blynk_b = param[2].asInt();
+  customize = param.asInt();
 }
-
 BLYNK_WRITE(V5)
 {
-  modeSel = param.asInt();
+  blynk_r = param.asInt();
+}
+BLYNK_WRITE(V6)
+{
+  blynk_g = param.asInt();
+}
+BLYNK_WRITE(V7)
+{
+  blynk_b = param.asInt();
 }
 
 void loop()
@@ -169,7 +183,7 @@ void loop()
     //////////////////// mode 0 ////////////////////
     if ( modeSel == 0)
     { // bar flash mode
-      if (!togRand)
+      if (!customize)
       { // using random RBG value to determine colors
         randG = random(0x100);
         randR = random(0x100);
@@ -280,38 +294,25 @@ void loop()
         heads[beamCnt] = 0;
         tails[beamCnt] = beamLen;
 
-        if (!togRand) // every beam gets a random color
+        if (!customize) // every beam gets a random color
         {
           r[beamCnt] = random(0x100);
           g[beamCnt] = random(0x100);
           b[beamCnt] = random(0x100);
+        }
+        else
+        { // using zeRGBa on Blynk app to determine color
+          g[beamCnt] = blynk_g;
+          r[beamCnt] = blynk_r;
+          b[beamCnt] = blynk_b;
         }
 
         beamCnt++;
         //Serial.println("beat det");
       }
       //if ( beamDelay % COUNT_TO == COUNT_TO && heads[0] >= 0)
-      for (i = 0; i < NUMPIXELS; i++)
-      {
-        if ( heads[i] >= 0)
-        { // update head location every COUNT_TO to control beam speed
-          if (!togRand)
-            strip.setPixelColor(heads[i], g[i], r[i], b[i]);
-          else
-            strip.setPixelColor(heads[i], 0, 0xFF, 0);    // 'On' pixel at head
-          
-          strip.setPixelColor(tails[i], 0);             // 'Off' pixel at tail
-          
-          if ( ++heads[i] >= NUMPIXELS )  // reset head
-            heads[i] = -1;
-    
-          if ( ++tails[i] >= NUMPIXELS )  // reset tail
-            tails[i] = beamLen;
-    
-          //Serial.println("moving head");
-        }
-      }
     }
+    //////////////////// mode 3 ////////////////////
     else if ( modeSel == 3 )
     { // random small bars
       
@@ -319,9 +320,19 @@ void loop()
       
       if (val == 10)
       {
-        randG = random(0x100);
-        randR = random(0x100);
-        randB = random(0x100);
+        if (!customize)
+        {
+          randG = random(0x100);
+          randR = random(0x100);
+          randB = random(0x100);  
+        }
+        else
+        {
+          randG = 0;
+          randR = 0xFF;
+          randB = 0;
+        }
+        
         for (int j = i ; j < i + MINIBAR_LEN_BASS; j++)
         {
           r[j] = randR;
@@ -330,19 +341,52 @@ void loop()
         }
       }
 
-      i = random(60 - MINIBAR_LEN);
-      if (val == 17 || val == 54)
+      i = random(60 - MINIBAR_LEN_MIDL);
+      if (val == 17)
       {
-        randG = random(0x100);
-        randR = random(0x100);
-        randB = random(0x100);
-        for (int j = i ; j < i + MINIBAR_LEN; j++)
+        if (!customize)
+        {
+          randG = random(0x100);
+          randR = random(0x100);
+          randB = random(0x100);  
+        }
+        else
+        {
+          randG = 0x7F;
+          randR = 0xFF;
+          randB = 0;
+        }
+        for (int j = i ; j < i + MINIBAR_LEN_MIDL; j++)
         {
           r[j] = randR;
           g[j] = randG;
           b[j] = randB;
         }
       }
+
+      i = random(60 - MINIBAR_LEN_TREB);
+      if (val == 54)
+      {
+        if (!customize)
+        {
+          randG = random(0x100);
+          randR = random(0x100);
+          randB = random(0x100);  
+        }
+        else
+        {
+          randG = 0xEE;
+          randR = 0x82;
+          randB = 0xEE;
+        }
+        for (int j = i ; j < i + MINIBAR_LEN_TREB; j++)
+        {
+          r[j] = randR;
+          g[j] = randG;
+          b[j] = randB;
+        }
+      }
+      
     }
     else if ( modeSel == 4 )
     { // spectrum avg
@@ -355,6 +399,24 @@ void loop()
       }
     }
   } // end of client available loop
+
+  // beam
+  for (i = 0; i < NUMPIXELS; i++)
+  {
+    if ( heads[i] >= 0)
+    { // update head location every COUNT_TO to control beam speed
+      
+      strip.setPixelColor(heads[i], g[i], r[i], b[i]);    // 'On' pixel at head
+      strip.setPixelColor(tails[i], 0);                   // 'Off' pixel at tail
+      
+      if ( ++heads[i] >= NUMPIXELS )  // reset head
+        heads[i] = -1;
+    
+      if ( ++tails[i] >= NUMPIXELS )  // reset tail
+        tails[i] = beamLen;
+    }
+  }
+
 
   // dimming in the right mode
   if ( modeSel == 0 || modeSel == 1 || modeSel == 3 )
