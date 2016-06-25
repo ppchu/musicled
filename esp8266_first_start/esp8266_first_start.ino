@@ -1,3 +1,15 @@
+/*
+ * Student: Peter Chu
+ * Advisor: Dr Bridget Benson
+ * 
+ * Senior Project: musicLED
+ * Description:
+ *  This project visualizes a strip of 60 RGB LEDs (APA102C)
+ *  to music information delivered by the accompanying 
+ *  Processing app. It uses Blynk on iOS/Andorid to adjust
+ *  the various modes and settings of the application.
+ */
+
 /**************************************************************
  * Blynk is a platform with iOS and Android apps to control
  * Arduino, Raspberry Pi and the likes over the Internet.
@@ -13,8 +25,6 @@
  * This example code is in public domain.
  *
  **************************************************************
- * This example runs directly on ESP8266 chip.
- *
  * You need to install this for ESP8266 development:
  *   https://github.com/esp8266/Arduino
  *
@@ -32,18 +42,18 @@
 #include <ESP8266WiFiMulti.h>
 
 // constants
-#define NUMPIXELS 60    // how many LEDs on the strip
-#define ESP8266_LED 5   // ESP8266 on-board LED on port 5
-#define MINIBAR_LEN_TREB 7 // length of small sections that light up in mode 3
-#define MINIBAR_LEN_BASS 30
-#define MINIBAR_LEN_MIDL 15 
+#define NUMPIXELS 60        // number LEDs on the strip
+#define ESP8266_LED 5       // ESP8266 on-board LED on port 5
+#define MINIBAR_LEN_TREB 7  // len of small bar in mode 3
+#define MINIBAR_LEN_BASS 30 // len of mid bar in mode 3
+#define MINIBAR_LEN_MIDL 15 // len of mid bar in mode 3
 
 #define DATAPIN   2 // GPIO2 - MOSI
 #define CLOCKPIN  4 // GPIO4 - CLK
 
-#define IP_ADDR "172.20.10.6"
-#define SSID_NAME "Peter's iPhone"
-#define SSID_PW "peteriscool"
+#define IP_ADDR "172.20.10.6"       // IP address of pc running Processing app
+#define SSID_NAME "Peter's iPhone"  // SSID of the network in use
+#define SSID_PW "peteriscool"       // password to the network in use
 
 // WiFi
 ESP8266WiFiMulti WiFiMulti;
@@ -60,13 +70,13 @@ char auth[] = "62999818c539415093b705f3be062d70";
 
 // global variables
 bool setupFailed = false; // flag for WiFi setup. if failed, blink onboard LED
-WiFiClient client; // create TCP connection
-byte val = 0;
+WiFiClient client;        // create TCP connection
+byte val = 0;             // val received from Processing app (beat in val bin)
 
 // LED controlling variables
 unsigned int r[NUMPIXELS] = {0}; // each index holds the R, G, or B value
-unsigned int g[NUMPIXELS] = {0}; // of the LED with that index
-unsigned int b[NUMPIXELS] = {0};
+unsigned int g[NUMPIXELS] = {0}; // of the LED with that index ranging
+unsigned int b[NUMPIXELS] = {0}; // from 0 - 255
 
 int heads[NUMPIXELS] = {-1};   // array holding the heads and tails values
 int tails[NUMPIXELS] = {-1};   // of the "beams" that go across the LED strip
@@ -172,8 +182,8 @@ BLYNK_READ(V9)
 
 void loop()
 {
-  int i;
-  int randG, randR, randB;
+  int i;                // counter used for misc purposes
+  int gVal, rVal, bVal; // temporary holder variables for RGB values
 
   // blink onboard LED if wifi failed
   if (setupFailed == true)
@@ -194,26 +204,26 @@ void loop()
     //////////////////// mode 0 ////////////////////
     if ( modeSel == 0)  // bar flash mode
     {
-      if (!customize)   // custom colors?
+      if (!customize)   // custom colors
       { 
-        randG = random(0x100);
-        randR = random(0x100);
-        randB = random(0x100);
+        gVal = random(0x100);
+        rVal = random(0x100);
+        bVal = random(0x100);
       }
-      else  // using zeRGBa on Blynk app to determine color
+      else  // use sliders on Blynk app to determine color
       { 
-        randG = blynk_g;
-        randR = blynk_r;
-        randB = blynk_b;
+        gVal = blynk_g;
+        rVal = blynk_r;
+        bVal = blynk_b;
       }
       
       if (val == 10) // detecting == bin2 (71 < val < 86 Hz )
       { 
         for ( i = 0; i < NUMPIXELS; i++)
         {
-          r[i] = randR;
-          g[i] = randG;
-          b[i] = randB;
+          r[i] = rVal;
+          g[i] = gVal;
+          b[i] = bVal;
         }
       }
     }
@@ -336,9 +346,9 @@ void loop()
       // random colors if custom button not pressed on Blynk app
       if (!customize)
       {
-        randG = random(0x100);
-        randR = random(0x100);
-        randB = random(0x100);  
+        gVal = random(0x100);
+        rVal = random(0x100);
+        bVal = random(0x100);  
       }
 
       // determine location of bass bar
@@ -347,15 +357,15 @@ void loop()
       {
         if (customize)
         {
-          randG = blynk_g;
-          randR = blynk_r;
-          randB = blynk_b;
+          gVal = blynk_g;
+          rVal = blynk_r;
+          bVal = blynk_b;
         }
         for (int j = i ; j < i + MINIBAR_LEN_BASS; j++)
         {
-          r[j] = randR;
-          g[j] = randG;
-          b[j] = randB;
+          r[j] = rVal;
+          g[j] = gVal;
+          b[j] = bVal;
         }
       }
       // determine location of mid bar
@@ -364,15 +374,15 @@ void loop()
       {
         if (customize)
         {
-          randG = blynk_r;
-          randR = blynk_b;
-          randB = blynk_g;
+          gVal = blynk_r;
+          rVal = blynk_b;
+          bVal = blynk_g;
         }
         for (int j = i ; j < i + MINIBAR_LEN_MIDL; j++)
         {
-          r[j] = randR;
-          g[j] = randG;
-          b[j] = randB;
+          r[j] = rVal;
+          g[j] = gVal;
+          b[j] = bVal;
         }
       }
       // determine location of treble bar
@@ -381,15 +391,15 @@ void loop()
       {
         if (customize)
         {
-          randG = blynk_b;
-          randR = blynk_g;
-          randB = blynk_r;
+          gVal = blynk_b;
+          rVal = blynk_g;
+          bVal = blynk_r;
         }
         for (int j = i ; j < i + MINIBAR_LEN_TREB; j++)
         {
-          r[j] = randR;
-          g[j] = randG;
-          b[j] = randB;
+          r[j] = rVal;
+          g[j] = gVal;
+          b[j] = bVal;
         }
       }
     }
@@ -408,13 +418,14 @@ void loop()
   } // end of client available loop
 
   // mode 2 - beam propagation
-  // update head location every beamPropDelay to control beam propagation speed
+  // update head location every beamPropDelay 
+  // to control beam propagation speed
   if (beamDelay++ % beamPropDelay == 0)
   {
     for (i = 0; i < NUMPIXELS; i++)
     {
-      strip.setPixelColor(heads[i], g[i], r[i], b[i]);    // 'On' pixel at head
-      strip.setPixelColor(tails[i], 0);                   // 'Off' pixel at tail
+      strip.setPixelColor(heads[i], g[i], r[i], b[i]);  // 'On' pixel at head
+      strip.setPixelColor(tails[i], 0);                 // 'Off' pixel at tail
       
       if (heads[i] >= 0)
       { 
