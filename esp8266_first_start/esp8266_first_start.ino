@@ -34,7 +34,6 @@
 // constants
 #define NUMPIXELS 60    // how many LEDs on the strip
 #define ESP8266_LED 5   // ESP8266 on-board LED on port 5
-#define COUNT_TO 20   // beam mode counter
 #define MINIBAR_LEN_TREB 7 // length of small sections that light up in mode 3
 #define MINIBAR_LEN_BASS 30
 #define MINIBAR_LEN_MIDL 15 
@@ -60,7 +59,7 @@ Adafruit_DotStar strip = Adafruit_DotStar(NUMPIXELS, DATAPIN, CLOCKPIN);
 char auth[] = "62999818c539415093b705f3be062d70";
 
 // global variables
-bool setupFailed = false; // flag for WiFi setup validity. if failed, blink red
+bool setupFailed = false; // flag for WiFi setup. if failed, blink onboard LED
 WiFiClient client; // create TCP connection
 byte val = 0;
 
@@ -72,17 +71,16 @@ unsigned int b[NUMPIXELS] = {0};
 int heads[NUMPIXELS] = {-1};   // array holding the heads and tails values
 int tails[NUMPIXELS] = {-1};   // of the "beams" that go across the LED strip
 int beamCnt = 0;
-int beamDelay = 0;
-int beamLen = -7;
+int beamDelay = 0;      // counter that increments and every...
+int beamPropDelay = 4;  // ...beamPropDelay it updates the beam
+int beamLen = -7;       // length of beam in LEDs
 
 // Blynk variables
-int customize, modeSel;
-int blynk_r, blynk_g, blynk_b;
+int customize, modeSel;         // flags set by Blynk app
+int blynk_r, blynk_g, blynk_b;  // r,g,b values set by Blynk app
 
 void setup()
 {
-  int i;
-  
   // set up onboard LED mode
   pinMode(ESP8266_LED, OUTPUT);
   
@@ -163,41 +161,54 @@ BLYNK_WRITE(V7)
 {
   blynk_b = param.asInt();
 }
+BLYNK_WRITE(V8)
+{
+  beamPropDelay = param.asInt();
+}
+BLYNK_READ(V9)
+{
+  Blynk.virtualWrite(9, modeSel);
+}
 
 void loop()
 {
   int i;
   int randG, randR, randB;
 
-  // do nothing if wifi failed
+  // blink onboard LED if wifi failed
   if (setupFailed == true)
+  {
+    digitalWrite(ESP8266_LED, HIGH);
+    delay(1000);
+    digitalWrite(ESP8266_LED, LOW);
+    delay(1000); 
     return;
-
+  }
+  
   Blynk.run();  // Initiates Blynk
   
   if (client.available())
   { // if data is availble to read
     val = client.read();
-    //Serial.println(val);
 
     //////////////////// mode 0 ////////////////////
-    if ( modeSel == 0)
-    { // bar flash mode
-      if (!customize)
-      { // using random RBG value to determine colors
+    if ( modeSel == 0)  // bar flash mode
+    {
+      if (!customize)   // custom colors?
+      { 
         randG = random(0x100);
         randR = random(0x100);
         randB = random(0x100);
       }
-      else
-      { // using zeRGBa on Blynk app to determine color
+      else  // using zeRGBa on Blynk app to determine color
+      { 
         randG = blynk_g;
         randR = blynk_r;
         randB = blynk_b;
       }
       
-      if (val == 10)
-      { // detecting == bin2 (71 < val < 86 Hz )
+      if (val == 10) // detecting == bin2 (71 < val < 86 Hz )
+      { 
         for ( i = 0; i < NUMPIXELS; i++)
         {
           r[i] = randR;
@@ -205,83 +216,92 @@ void loop()
           b[i] = randB;
         }
       }
-      // bar flash mode end
     }
     //////////////////// mode 1 ////////////////////
     else if ( modeSel == 1 )
     { // spectrum mode (sub bass, bass, midrange, high mids, high freq)
-      if (val < 5)
-      { // red
-        r[val] = 0xFF;
-        g[val] = 0;
-        b[val] = 0;
-      }
-      else if (val < 10)
-      { // orange
-        r[val] = 0xFF;
-        g[val] = 0xA5;
-        b[val] = 0;
-      }
-      else if (val < 15)
-      { // yellow
-        r[val] = 0xFF;
-        g[val] = 0xFF;
-        b[val] = 0;
-      }
-      else if (val < 20)
-      { // chartreuse
-        r[val] = 0x7F;
-        g[val] = 0xFF;
-        b[val] = 0;
-      }
-      else if (val < 25)
-      { // green
-        r[val] = 0;
-        g[val] = 0x80;
-        b[val] = 0;
-      }
-      else if (val < 30)
-      { // spring
-        r[val] = 0;
-        g[val] = 0xE6;
-        b[val] = 0x73;
-      }
-      else if (val < 35)
-      { // cyan
-        r[val] = 0;
-        g[val] = 0xFF;
-        b[val] = 0xFF;
-      }
-      else if (val < 40)
-      { // azure
-        r[val] = 0xF0;
-        g[val] = 0xFF;
-        b[val] = 0xFF;
-      }
-      else if (val < 45)
-      { // blue
-        r[val] = 0;
-        g[val] = 0;
-        b[val] = 0xFF;
-      }
-      else if (val < 50)
-      { // violet
-        r[val] = 0xEE;
-        g[val] = 0x82;
-        b[val] = 0xEE;
-      }
-      else if (val < 55)
-      { // magenta
-        r[val] = 0xFF;
-        g[val] = 0x00;
-        b[val] = 0xFF;
+      if (customize)
+      {
+        r[val] = blynk_r; 
+        g[val] = blynk_g;
+        b[val] = blynk_b;
       }
       else
-      { // rose
-        r[val] = 0xFF;
-        g[val] = 0;
-        b[val] = 0xFF;
+      {
+        if (val < 5)
+        { // red
+          r[val] = 0xFF;
+          g[val] = 0;
+          b[val] = 0;
+        }
+        else if (val < 10)
+        { // orange
+          r[val] = 0xFF;
+          g[val] = 0xA5;
+          b[val] = 0;
+        }
+        else if (val < 15)
+        { // yellow
+          r[val] = 0xFF;
+          g[val] = 0xFF;
+          b[val] = 0;
+        }
+        else if (val < 20)
+        { // chartreuse
+          r[val] = 0x7F;
+          g[val] = 0xFF;
+          b[val] = 0;
+        }
+        else if (val < 25)
+        { // green
+          r[val] = 0;
+          g[val] = 0x80;
+          b[val] = 0;
+        }
+        else if (val < 30)
+        { // spring
+          r[val] = 0;
+          g[val] = 0xE6;
+          b[val] = 0x73;
+        }
+        else if (val < 35)
+        { // cyan
+          r[val] = 0;
+          g[val] = 0xFF;
+          b[val] = 0xFF;
+        }
+        else if (val < 40)
+        { // azure
+          r[val] = 0xF0;
+          g[val] = 0xFF;
+          b[val] = 0xFF;
+        }
+        else if (val < 45)
+        { // blue
+          r[val] = 0;
+          g[val] = 0;
+          b[val] = 0xFF;
+        }
+        else if (val < 50)
+        { // violet
+          r[val] = 0xEE;
+          g[val] = 0x82;
+          b[val] = 0xEE;
+        }
+        else if (val < 55)
+        { // magenta
+          r[val] = 0xFF;
+          g[val] = 0x00;
+          b[val] = 0xFF;
+        }
+        else
+        { // rose
+          r[val] = 0xFF;
+          g[val] = 0;
+          b[val] = 0xFF;
+        }
       }
+
     }
     //////////////////// mode 2 ////////////////////
     else if ( modeSel == 2 )
@@ -306,33 +326,31 @@ void loop()
           r[beamCnt] = blynk_r;
           b[beamCnt] = blynk_b;
         }
-
         beamCnt++;
-        //Serial.println("beat det");
       }
-      //if ( beamDelay % COUNT_TO == COUNT_TO && heads[0] >= 0)
     }
     //////////////////// mode 3 ////////////////////
     else if ( modeSel == 3 )
-    { // random small bars
-      
+    { // random small bars (bass, mid, treble)
+
+      // random colors if custom button not pressed on Blynk app
+      if (!customize)
+      {
+        randG = random(0x100);
+        randR = random(0x100);
+        randB = random(0x100);  
+      }
+
+      // determine location of bass bar
       i = random(60 - MINIBAR_LEN_BASS);
-      
       if (val == 10)
       {
-        if (!customize)
+        if (customize)
         {
-          randG = random(0x100);
-          randR = random(0x100);
-          randB = random(0x100);  
+          randG = blynk_g;
+          randR = blynk_r;
+          randB = blynk_b;
         }
-        else
-        {
-          randG = 0;
-          randR = 0xFF;
-          randB = 0;
-        }
-        
         for (int j = i ; j < i + MINIBAR_LEN_BASS; j++)
         {
           r[j] = randR;
@@ -340,21 +358,15 @@ void loop()
           b[j] = randB;
         }
       }
-
+      // determine location of mid bar
       i = random(60 - MINIBAR_LEN_MIDL);
       if (val == 17)
       {
-        if (!customize)
+        if (customize)
         {
-          randG = random(0x100);
-          randR = random(0x100);
-          randB = random(0x100);  
-        }
-        else
-        {
-          randG = 0x7F;
-          randR = 0xFF;
-          randB = 0;
+          randG = blynk_r;
+          randR = blynk_b;
+          randB = blynk_g;
         }
         for (int j = i ; j < i + MINIBAR_LEN_MIDL; j++)
         {
@@ -363,21 +375,15 @@ void loop()
           b[j] = randB;
         }
       }
-
+      // determine location of treble bar
       i = random(60 - MINIBAR_LEN_TREB);
       if (val == 54)
       {
-        if (!customize)
+        if (customize)
         {
-          randG = random(0x100);
-          randR = random(0x100);
-          randB = random(0x100);  
-        }
-        else
-        {
-          randG = 0xEE;
-          randR = 0x82;
-          randB = 0xEE;
+          randG = blynk_b;
+          randR = blynk_g;
+          randB = blynk_r;
         }
         for (int j = i ; j < i + MINIBAR_LEN_TREB; j++)
         {
@@ -386,8 +392,8 @@ void loop()
           b[j] = randB;
         }
       }
-      
     }
+    /* // future work - average spectrum energy
     else if ( modeSel == 4 )
     { // spectrum avg
       for (i = 0; i < NUMPIXELS; i++)
@@ -398,27 +404,32 @@ void loop()
         strip.setPixelColor(i, g[i], r[i], b[i]); 
       }
     }
+    */
   } // end of client available loop
 
-  // beam
-  for (i = 0; i < NUMPIXELS; i++)
+  // mode 2 - beam propagation
+  // update head location every beamPropDelay to control beam propagation speed
+  if (beamDelay++ % beamPropDelay == 0)
   {
-    if ( heads[i] >= 0)
-    { // update head location every COUNT_TO to control beam speed
-      
+    for (i = 0; i < NUMPIXELS; i++)
+    {
       strip.setPixelColor(heads[i], g[i], r[i], b[i]);    // 'On' pixel at head
       strip.setPixelColor(tails[i], 0);                   // 'Off' pixel at tail
       
-      if ( ++heads[i] >= NUMPIXELS )  // reset head
-        heads[i] = -1;
-    
-      if ( ++tails[i] >= NUMPIXELS )  // reset tail
-        tails[i] = beamLen;
+      if (heads[i] >= 0)
+      { 
+        if ( ++heads[i] >= NUMPIXELS)  // reset head
+          heads[i] = -1;
+      }
+      if (tails[i] >= beamLen)
+      {
+        if ( ++tails[i] >= NUMPIXELS )  // reset tail
+          tails[i] = beamLen - 1;  
+      }
     }
   }
 
-
-  // dimming in the right mode
+  // dimming, all modes except beam (mode 2)
   if ( modeSel == 0 || modeSel == 1 || modeSel == 3 )
   {
     for ( i = 0; i < NUMPIXELS; i++ )
@@ -432,14 +443,10 @@ void loop()
       if (b[i] > 0)
         b[i] /= 1.04;
       
-      
       strip.setPixelColor(i, g[i], r[i], b[i]);  
     }
-    //Serial.printf("%d %d %d\r", g[0], r[0], b[0]);
   }
   strip.show();
 
-  
-  delay(5);
+  delay(5); // give uController time to maintain behind the scenes tasks
 }
-
