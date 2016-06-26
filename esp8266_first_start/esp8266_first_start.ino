@@ -51,8 +51,8 @@
 #define DATAPIN   2 // GPIO2 - MOSI
 #define CLOCKPIN  4 // GPIO4 - CLK
 
-#define IP_ADDR "172.20.10.6"       // IP address of pc running Processing app
-#define SSID_NAME "Peter's iPhone"  // SSID of the network in use
+#define IP_ADDR "192.168.1.130"       // IP address of pc running Processing app
+#define SSID_NAME "peter"           // SSID of the network in use
 #define SSID_PW "peteriscool"       // password to the network in use
 
 // WiFi
